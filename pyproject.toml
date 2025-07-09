@@ -1,0 +1,39 @@
+[build-system]
+requires = [
+    "setuptools>=61.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyoctopus"
+version = "1.0.0"
+description = "PyOctopus is a software library written in the Python programming language that facilitates the management of Octopus Deploy. It provides developers with a set of functions and methods to interact with the Octopus REST API, enabling tasks such as deploying solutions, managing spaces, and automating common deployment operations."
+readme = "README.md"
+requires-python = ">=3.7"
+license = "MIT"
+license-files = [
+	"LICEN[CS]E"
+]
+maintainers = [
+	{name = "Anderson Carlos Ferreira da Silva", email = "andersoncarlosfs@outlook.com"}
+]
+dependencies = [
+    "importlib-resources>=5.9"
+]
+
+[project.scripts]
+pyoctopus = "pyoctopus.__main__:Main.main"
+
+[tool.setuptools]
+include-package-data = true
+package-dir = {"" = "source"}
+
+[tool.setuptools.packages.find]
+where = [
+    "source"
+]
+
+[tool.setuptools.package-data]
+"pyoctopus.resources.settings" = [
+	"*.json"
+]
