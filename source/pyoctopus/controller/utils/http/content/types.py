@@ -8,3 +8,6 @@ class ContentType(str, Enum):
     # XML = "application/xml"
     # TEXT = "text/plain"
     # HTML = "text/html"
+    
+    def __str__(self):
+        return self.value

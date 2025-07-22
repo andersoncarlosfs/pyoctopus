@@ -7,3 +7,6 @@ class HttpMethod(str, Enum):
     # PUT = "PUT"
     # DELETE = "DELETE"
     # PATCH = "PATCH"
+    
+    def __str__(self):
+        return self.value

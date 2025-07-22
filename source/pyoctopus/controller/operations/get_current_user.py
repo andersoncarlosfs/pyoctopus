@@ -2,7 +2,7 @@ from typing import Any
 from typing import Dict
 from typing import Union
 
-from pyoctopus.controller.abstract import OperationBase
+from pyoctopus.controller.base import OperationBase
 from pyoctopus.controller.utils.http.methods import HttpMethod
 
 

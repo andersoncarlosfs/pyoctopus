@@ -9,14 +9,14 @@ from os import environ
 from os.path import dirname
 from pkgutil import iter_modules
 
-from pyoctopus.controller.abstract import OperationBase
+from pyoctopus.controller.base import OperationBase
 
 
 class Main:
-    def __init__(self, username: str, password: str, token: str, uri: str) -> None:
-        self.uri=uri,
-        self.username=username,
-        self.password=password,
+    def __init__(self, username: str, password: str, token: str, host: str) -> None:
+        self.host=host
+        self.username=username
+        self.password=password
         self.token=token
 
     def __call__(self, **kwargs) -> None:
@@ -28,7 +28,7 @@ class Main:
             if getattr(operation, "name") == command:
                 # Invoking the operation
                 operation(
-                    uri=self.uri,                                
+                    host=self.host,                                
                     username=self.username,
                     password=self.password,
                     token=self.token
@@ -88,11 +88,11 @@ class Main:
             default=environ.get("PYOCTOPUS_TOKEN", SUPPRESS)
         )
         main_argument_parser.add_argument(
-            "--uri",
-            dest="uri",
+            "--host",
+            dest="host",
             type=str,
-            required=True,
-            default=environ.get("PYOCTOPUS_URI", None)
+            required=not environ.get("PYOCTOPUS_HOST", "").strip(),
+            default=environ.get("PYOCTOPUS_HOST", None)
         )
 
         # Retrieving the arguments
@@ -106,7 +106,7 @@ class Main:
             username=arguments.pop("username", None),
             password=arguments.pop("password", None),
             token=arguments.pop("token", None),
-            uri=arguments.pop("uri"),
+            host=arguments.pop("host"),
         )(**arguments)
 
 
