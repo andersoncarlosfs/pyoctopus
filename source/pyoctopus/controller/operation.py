@@ -1,75 +1,94 @@
-from http import HTTPStatus
-from http.client import HTTPSConnection
-from json import dumps
-from json import loads
+from abc import ABC 
+from abc import abstractmethod
+from argparse import ArgumentParser
+from inspect import Parameter
+from inspect import signature
 from typing import Any
 from typing import Dict
+from typing import get_type_hints
+from typing import List
 from typing import Optional
 from typing import Union
 
+from aiohttp import ClientSession
 
 from pyoctopus.controller.utils.http.content.types import ContentType
 from pyoctopus.controller.utils.http.headers import HttpHeader
 from pyoctopus.controller.utils.http.methods import HttpMethod
-from pyoctopus.controller.utils.octopus import OctopusBase
 
 
-class OperationBase(OctopusBase, HTTPSConnection):
-    identifier: str = ""
-    method: Union[str, HttpMethod] = ""
-    name: str = ""
-    path: str = "/api"
+class OperationBase(ABC): 
+    identifier: str
+    method: Union[str, HttpMethod]
+    path: str
     
     def __init__(
         self, 
-        host: str, 
-        username: str, 
-        password: str, 
-        port: int = None, 
-        token: str = None
+        session: ClientSession,
+        url: str, 
+        token: str
     ) -> None:
-        super().__init__(
-            host=host, 
-            port=port
-        )
+        self.__session = session
+        self.__url = url
         self.__headers = {
             HttpHeader.CONTENT_TYPE: ContentType.JSON,
             HttpHeader.X_OCTOPUS_API_KEY: token
         }
         
-    def request(
+    async def __call__(
         self,
-        method: Union[str, HttpMethod],
-        url: str,
-        body: Optional[Union[str, bytes]] = None,
-        headers: Optional[Dict[str, str]] = None
-    ) -> None:
-        if headers is None:
-            headers = self.__headers
-        else:
-            for key, value in self.__headers.items():
-                if key not in headers:
-                    headers[key] = value
-
-        super().request(method, url, body=body, headers=headers)
+        parameters: Optional[Dict[str, Any]] = None,
+        body: Optional[Union[str, bytes]] = None
+    ) -> Any:     
+        async with self.__session.request(self.method, f"{self.__url}{self.path}", params=parameters, json=body, headers=self.__headers) as response:
+            response.raise_for_status()
+            
+            return await response.json()
     
-    def getresponse(
-        self
-    ) -> Dict[str, Any]: 
-        response = super().getresponse()
+    @classmethod
+    def set_parser(cls, parser: ArgumentParser, shared: Optional[List[str]] = None) -> None:
+        parser.set_defaults(command=cls)
         
-        if response.status == HTTPStatus.OK:
-            return loads(response.read().decode())
+        for name, value in signature(cls.__init__).parameters.items():
+            if name in shared:
+                continue
 
-        return {
-            "data": response.read().decode(),
-            "reason": response.reason,
-            "status": response.status
-        }
-        
-    def __call__(
+            kind = get_type_hints(cls.__init__).get(name)
+            
+            default = value.default if value.default is not Parameter.empty else None
+
+            if kind is bool:
+                group = parser.add_mutually_exclusive_group()
+                
+                group.add_argument(
+                    f"--{name}",
+                    dest=name,
+                    action="store_true"
+                )
+                group.add_argument(
+                    f"--no-{name}",
+                    dest=name,
+                    action="store_false"
+                )
+                
+                parser.set_defaults(**{name: default})
+                
+            else:
+                parser.add_argument(
+                    f"--{name}",
+                    type=kind,
+                    required=value.default is Parameter.empty,
+                    default=default
+                )
+    
+    @property
+    def body(
         self
-    ) -> Dict[str, Any]:
-        self.request(self.method, self.path)
+    ) -> Optional[Union[str, bytes]]:
+        return None
         
-        return self.getresponse()
+    @property
+    def parameters(
+        self
+    ) -> Optional[Dict[str, Any]]:
+        return None

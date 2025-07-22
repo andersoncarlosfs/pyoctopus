@@ -18,6 +18,7 @@ maintainers = [
 	{name = "Anderson Carlos Ferreira da Silva", email = "andersoncarlosfs@outlook.com"}
 ]
 dependencies = [
+	"aiohttp>=2.0",
     "importlib-resources>=5.9"
 ]
 

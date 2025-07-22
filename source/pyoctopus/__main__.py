@@ -1,43 +1,22 @@
 from argparse import ArgumentParser
 from argparse import SUPPRESS
+from asyncio import run
 from importlib import import_module
 from importlib_resources import files
 from inspect import getmembers
 from inspect import getfile
 from inspect import isclass
+from inspect import signature
 from os import environ
 from os.path import dirname
 from pkgutil import iter_modules
 
+from aiohttp import ClientSession
+
 from pyoctopus.controller.operation import OperationBase
-from pyoctopus.controller.utils.octopus import OctopusBase
 
 
-class Main(OctopusBase):
-    def __init__(
-        self, 
-        host: str, 
-        token: str
-    ) -> None:
-        self.__host=host,
-        self.__token=token
-
-    def __call__(
-        self, 
-        **kwargs
-    ) -> None:
-        # Retrieving the command
-        command = kwargs.pop("command")
-
-        # Searching the operation
-        for operation in Main.__get_classes():
-            if getattr(operation, "name") == command:
-                # Invoking the operation
-                operation(
-                    host=self.__host,
-                    token=self.__token
-                )()
-
+class Main:        
     @staticmethod
     def __get_classes(
         module: str = "pyoctopus.controller.operations", 
@@ -54,49 +33,69 @@ class Main(OctopusBase):
                     if isclass(member) and issubclass(member, type) and module in getattr(member, "__module__"):
                         yield member
 
-    @staticmethod
-    def main() -> None:
+    async def __call__(
+        self
+    ) -> None:
         # Setting an argument parser
-        main_argument_parser = ArgumentParser(description="PyOctopus")
+        parser = ArgumentParser(description="PyOctopus")
 
         # Setting an argument subparsers
-        subparsers = main_argument_parser.add_subparsers(dest="command", required=True)
-
-        # Setting a list of generic subparsers
-        generic_argument_parser = {}
+        subparsers = parser.add_subparsers(dest="command", required=True)
+        
+        shared = [name for name in signature(OperationBase.__init__).parameters]
 
         for operation in Main.__get_classes():
-            # Setting a command
-            command = getattr(operation, "name")
-
             # Setting an argument subparser for processing the data
-            generic_argument_parser[command] = subparsers.add_parser(command)
+            getattr(operation, "set_parser")(
+                parser=subparsers.add_parser(
+                    getattr(operation, "identifier")
+                ),
+                shared=shared
+            )
 
         # Setting the main arguments
-        main_argument_parser.add_argument(
+        parser.add_argument(
             "--token",
             dest="token",
             type=str,
-            required=not environ.get("PYOCTOPUS_TOKEN", "").strip(),
-            default=environ.get("PYOCTOPUS_TOKEN", SUPPRESS)
+            required=not environ.get("OCTOPUS_REST_TOKEN", "").strip(),
+            default=environ.get("OCTOPUS_REST_TOKEN", SUPPRESS)
         )
-        main_argument_parser.add_argument(
-            "--host",
-            dest="host",
+        parser.add_argument(
+            "--url",
+            dest="url",
             type=str,
-            required=not environ.get("PYOCTOPUS_HOST", "").strip(),
-            default=environ.get("PYOCTOPUS_HOST", SUPPRESS)
+            required=not environ.get("OCTOPUS_REST_URL", "").strip(),
+            default=environ.get("OCTOPUS_REST_URL", SUPPRESS)
+        )
+        parser.add_argument(
+            "--timeout",
+            dest="timeout",
+            type=int,
+            required=False,
+            default=environ.get("OCTOPUS_REST_TIMEOUT", SUPPRESS)
         )
 
         # Retrieving the arguments
-        arguments = vars(main_argument_parser.parse_args())
+        arguments = vars(parser.parse_args())
 
-        # Running PyOctopus
-        Main(
-            host=arguments.pop("host"),
-            token=arguments.pop("token")
-        )(**arguments)
+        # Searching the operation
+        async with ClientSession(timeout=arguments.pop("timeout", None)) as session:
+            print(
+                await arguments.pop(
+                    "command"
+                )(
+                    session=session,
+                    url=arguments.pop("url"),
+                    token=arguments.pop("token"),
+                    **arguments
+                )()
+            )
+
+    @staticmethod
+    def main() -> None:
+        run(Main()())
 
 
 if __name__ == "__main__":
-    Main.main()
+    Main().main()
