@@ -9,17 +9,23 @@ from os import environ
 from os.path import dirname
 from pkgutil import iter_modules
 
-from pyoctopus.controller.base import OperationBase
+from pyoctopus.controller.operation import OperationBase
+from pyoctopus.controller.utils.octopus import OctopusBase
 
 
-class Main:
-    def __init__(self, username: str, password: str, token: str, host: str) -> None:
-        self.host=host
-        self.username=username
-        self.password=password
-        self.token=token
+class Main(OctopusBase):
+    def __init__(
+        self, 
+        host: str, 
+        token: str
+    ) -> None:
+        self.__host=host,
+        self.__token=token
 
-    def __call__(self, **kwargs) -> None:
+    def __call__(
+        self, 
+        **kwargs
+    ) -> None:
         # Retrieving the command
         command = kwargs.pop("command")
 
@@ -28,14 +34,15 @@ class Main:
             if getattr(operation, "name") == command:
                 # Invoking the operation
                 operation(
-                    host=self.host,                                
-                    username=self.username,
-                    password=self.password,
-                    token=self.token
+                    host=self.__host,
+                    token=self.__token
                 )()
 
     @staticmethod
-    def __get_classes(module: str = "pyoctopus.controller.operations", type: object = OperationBase):
+    def __get_classes(
+        module: str = "pyoctopus.controller.operations", 
+        type: object = OperationBase
+    ):
         for submodule in iter_modules([dirname(getfile(import_module(module)))]):
             submodule = getattr(submodule, "name")
 
@@ -67,24 +74,10 @@ class Main:
 
         # Setting the main arguments
         main_argument_parser.add_argument(
-            "--username",
-            dest="username",
-            type=str,
-            required=False,
-            default=environ.get("PYOCTOPUS_USERNAME", SUPPRESS)
-        )
-        main_argument_parser.add_argument(
-            "--password",
-            dest="password",
-            type=str,
-            required=False,
-            default=environ.get("PYOCTOPUS_PASSWORD", SUPPRESS)
-        )
-        main_argument_parser.add_argument(
             "--token",
             dest="token",
             type=str,
-            required=False,
+            required=not environ.get("PYOCTOPUS_TOKEN", "").strip(),
             default=environ.get("PYOCTOPUS_TOKEN", SUPPRESS)
         )
         main_argument_parser.add_argument(
@@ -92,21 +85,16 @@ class Main:
             dest="host",
             type=str,
             required=not environ.get("PYOCTOPUS_HOST", "").strip(),
-            default=environ.get("PYOCTOPUS_HOST", None)
+            default=environ.get("PYOCTOPUS_HOST", SUPPRESS)
         )
 
         # Retrieving the arguments
         arguments = vars(main_argument_parser.parse_args())
 
-        if not (arguments.get("token") or (arguments.get("username") and arguments.get("password"))):
-            main_argument_parser.error("the following arguments are required: --token or both --username and --password")
-
         # Running PyOctopus
         Main(
-            username=arguments.pop("username", None),
-            password=arguments.pop("password", None),
-            token=arguments.pop("token", None),
             host=arguments.pop("host"),
+            token=arguments.pop("token")
         )(**arguments)
 
 

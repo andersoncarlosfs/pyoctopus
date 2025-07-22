@@ -1,4 +1,3 @@
-from abc import ABC
 from http import HTTPStatus
 from http.client import HTTPSConnection
 from json import dumps
@@ -12,9 +11,10 @@ from typing import Union
 from pyoctopus.controller.utils.http.content.types import ContentType
 from pyoctopus.controller.utils.http.headers import HttpHeader
 from pyoctopus.controller.utils.http.methods import HttpMethod
+from pyoctopus.controller.utils.octopus import OctopusBase
 
 
-class OperationBase(ABC, HTTPSConnection):
+class OperationBase(OctopusBase, HTTPSConnection):
     identifier: str = ""
     method: Union[str, HttpMethod] = ""
     name: str = ""
@@ -28,11 +28,11 @@ class OperationBase(ABC, HTTPSConnection):
         port: int = None, 
         token: str = None
     ) -> None:
-        super().__init__(host, port)
-        self.username = username
-        self.password = password
-        self.token = token
-        self.headers = {
+        super().__init__(
+            host=host, 
+            port=port
+        )
+        self.__headers = {
             HttpHeader.CONTENT_TYPE: ContentType.JSON,
             HttpHeader.X_OCTOPUS_API_KEY: token
         }
@@ -44,40 +44,12 @@ class OperationBase(ABC, HTTPSConnection):
         body: Optional[Union[str, bytes]] = None,
         headers: Optional[Dict[str, str]] = None
     ) -> None:
-        if not self.headers[HttpHeader.X_OCTOPUS_API_KEY]:
-            self.headers.pop(HttpHeader.X_OCTOPUS_API_KEY, None)
-            
-            super().request(
-                HttpMethod.POST, 
-                f"{OperationBase.path}/users/login",
-                body=dumps({
-                    "Username": self.username,
-                    "Password": self.password
-                }),
-                headers=self.headers
-            )
-            
-            response = super().getresponse()
-            
-            if response.status == HTTPStatus.OK:
-                super().request(
-                    HttpMethod.GET, 
-                    f"{OperationBase.path}/users/access-token",
-                    body=None,
-                    headers=self.headers
-                )
-                
-                response = super().getresponse()
-            
-                if response.status == HTTPStatus.OK:
-                    self.headers[HttpHeader.X_OCTOPUS_API_KEY] = loads(response.read().decode())["AccessToken"]
-
         if headers is None:
-            headers = self.headers
+            headers = self.__headers
         else:
-            
-
-        headers[HttpHeader.X_OCTOPUS_API_KEY] = self.token
+            for key, value in self.__headers.items():
+                if key not in headers:
+                    headers[key] = value
 
         super().request(method, url, body=body, headers=headers)
     
@@ -86,13 +58,11 @@ class OperationBase(ABC, HTTPSConnection):
     ) -> Dict[str, Any]: 
         response = super().getresponse()
         
-        data = response.read().decode()
-        
         if response.status == HTTPStatus.OK:
-            return loads(data)
+            return loads(response.read().decode())
 
         return {
-            "data": data,
+            "data": response.read().decode(),
             "reason": response.reason,
             "status": response.status
         }
