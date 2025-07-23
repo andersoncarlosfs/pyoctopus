@@ -23,15 +23,20 @@ class Main:
         type: object = OperationBase
     ):
         for submodule in iter_modules([dirname(getfile(import_module(module)))]):
-            submodule = getattr(submodule, "name")
+            name = getattr(submodule, "name")
 
-            if submodule:
-                if not submodule.startswith(r"."):
-                    submodule = r"." + submodule
+            if name:
+                if not name.startswith(r"."):
+                    name = r"." + name
+                
+                if submodule.ispkg:
+                    yield from Main.__get_classes(f"{module}{name}")
+                    
+                else:
+                    for _, member in getmembers(import_module(name, package=module), isclass):
 
-                for _, member in getmembers(import_module(submodule, package=module), isclass):
-                    if isclass(member) and issubclass(member, type) and module in getattr(member, "__module__"):
-                        yield member
+                        if isclass(member) and issubclass(member, type) and module in getattr(member, "__module__"):
+                            yield member
 
     async def __call__(
         self

@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from json import dumps
 from typing import Any
 from typing import Optional
 from typing import Union
@@ -30,8 +29,7 @@ class LoginUserOperation(OperationBase):
         
     @property
     def body(self) -> Optional[Union[str, bytes]]:
-        return dumps({
-                    "Username": self.username,
-                    "Password": self.password
-                })
-           
+        return {
+            "Username": self.username,
+            "Password": self.password
+        }

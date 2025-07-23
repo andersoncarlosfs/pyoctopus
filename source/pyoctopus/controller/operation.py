@@ -36,11 +36,9 @@ class OperationBase(ABC):
         }
         
     async def __call__(
-        self,
-        parameters: Optional[Dict[str, Any]] = None,
-        body: Optional[Union[str, bytes]] = None
+        self
     ) -> Any:     
-        async with self.__session.request(self.method, f"{self.__url}{self.path}", params=parameters, json=body, headers=self.__headers) as response:
+        async with self.__session.request(self.method, f"{self.__url}{self.path}", params=self.parameters, json=self.body, headers=self.__headers) as response:
             response.raise_for_status()
             
             return await response.json()
