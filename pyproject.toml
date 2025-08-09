@@ -1,0 +1,53 @@
+# Build system configuration (PEP 517)
+[build-system]
+requires = [
+    "setuptools>=61.0" # Ensures PEP 621 metadata support
+]
+build-backend = "setuptools.build_meta"
+
+# Core project metadata (PEP 621)
+[project]
+name = "pyoctopus"
+version = "1.0.0"
+description = "PyOctopus is a software library written in the Python programming language that facilitates the management of Octopus Deploy. It provides developers with a set of functions and methods to interact with the Octopus REST API, enabling tasks such as deploying solutions, managing spaces, and automating common deployment operations."
+readme = "README.md" # Will be used for long_description
+requires-python = ">=3.7"
+license = "MIT"
+license-files = [
+	"LICEN[CS]E" # Support both LICENSE and LICENCE file naming
+]
+maintainers = [
+	{ name = "Anderson Carlos Ferreira da Silva", email = "andersoncarlosfs@outlook.com" }
+]
+dependencies = [
+	"aiohttp>=2.0", # Async HTTP requests
+    "importlib-resources>=5.9" # Backport for accessing package data
+]
+
+# Optional dependencies for specific features (install with `[docs]`)
+[project.optional-dependencies]
+docs = [
+  "mkdocs>=1.5", # Static site generator for Markdown
+  "mkdocs-material>=9.0", # Modern theme for MkDocs
+  "mkdocstrings[python]>=0.24" # Auto-generate API docs from Python source
+]
+
+# CLI entry point: `pyoctopus` will run Main.main() from __main__.py
+[project.scripts]
+pyoctopus = "pyoctopus.__main__:Main.main"
+
+# setuptools-specific options
+[tool.setuptools]
+include-package-data = true # Include non-code files from MANIFEST.in or package_data
+package-dir = { "" = "source" } # Source code is in ./source directory
+
+[tool.setuptools.packages.find]
+where = [ 
+	"source" # Look for packages under the 'source' directory
+]
+
+# Include JSON configuration files from the resources folder in the package
+[tool.setuptools.package-data]
+"pyoctopus.resources.settings" = [
+	"*.json"
+]
